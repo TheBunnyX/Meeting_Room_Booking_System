@@ -138,9 +138,9 @@ One Vercel project hosts everything.
 
 1. **Import the repository** and set **Root Directory** to `apps/web`. `vercel.json` sets the build command: generate
    the Prisma client, apply migrations, build Next.js.
-2. **Add Prisma Postgres** (Project → Storage → Create → Prisma Postgres), then add an environment variable
-   `DATABASE_URL` with the **direct** `postgres://` connection string the integration provides (`POSTGRES_URL`).
-   The `prisma+postgres://` Accelerate URL is not supported and the app says so if you use it.
+2. **Add Prisma Postgres** (Project → Storage → Create → Prisma Postgres). It provides `POSTGRES_URL`, a direct
+   `postgres://` connection string, and the app and the build use it automatically. To use another PostgreSQL, set
+   `DATABASE_URL` yourself. The `prisma+postgres://` Accelerate URL is not supported; the build says so if you use it.
 3. **Add Vercel Blob** (Storage → Create → Blob). This sets `BLOB_READ_WRITE_TOKEN` automatically.
 4. **Set the remaining variables** for Production:
    - `SECRET_KEY`: a unique random value of at least 32 characters
@@ -158,8 +158,10 @@ One Vercel project hosts everything.
    rm .env
    ```
 
-> **Preview deployments run migrations too.** Give Preview its own `DATABASE_URL` so a branch with an unreleased
-> migration never changes the production database.
+> **Preview deployments do not run migrations** by default, so a branch with an unreleased migration cannot change the
+> production database. Give Preview its own database and set `MIGRATE_PREVIEW=true` if previews should migrate it.
+>
+> **The build stops with a clear message** when no database is configured for Production, instead of failing deep inside Prisma.
 
 <details>
 <summary><strong>Background jobs and Vercel limits</strong></summary>
@@ -196,7 +198,7 @@ Copy [apps/web/.env.example](apps/web/.env.example) to `.env`. Never commit `.en
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | required | Direct PostgreSQL connection string. `POSTGRES_URL` is used if it is unset at runtime. |
+| `DATABASE_URL` | required | Direct PostgreSQL connection string. `POSTGRES_URL` (from Prisma Postgres) is used when it is unset. |
 | `SECRET_KEY` | required | Signs session and check-in tokens. In production: unique, at least 32 characters. |
 | `APP_ENV` | automatic | `development`, `test` or `production`. Vercel production counts as `production`: `Secure` cookies, weak secrets rejected. |
 | `BLOB_READ_WRITE_TOKEN` | none | Vercel Blob token for photo uploads. Without it uploads answer `503`. |
@@ -205,6 +207,7 @@ Copy [apps/web/.env.example](apps/web/.env.example) to `.env`. Never commit `.en
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `480` | Session lifetime. |
 | `STATUS_SWEEP_INTERVAL_SECONDS` | `60` | Minimum gap between traffic-triggered sweeps; `0` disables them. |
 | `LOGIN_MAX_ATTEMPTS` / `LOGIN_WINDOW_MINUTES` | `5` / `15` | Failed sign-ins allowed per client and email before a lockout. |
+| `MIGRATE_PREVIEW` | `false` | Run migrations on Vercel Preview deployments (Production always migrates). |
 | `DEMO_MODE` | `false` | Daily data reset, and allows seeding in production. |
 | `NEXT_PUBLIC_APP_URL` | production domain | Public address for the sitemap, social previews and QR codes. Set it before building. |
 | `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS` | development only | List demo accounts on the sign-in page. |
