@@ -13,6 +13,28 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+// A site that builds but answers every request with an error is worse than a failed build, so production
+// deployments must have the settings the server needs at runtime.
+if (env.VERCEL_ENV === "production") {
+  const secret = env.SECRET_KEY ?? "";
+  const placeholder = /^(change-this|replace-me|development-only)/.test(secret);
+  if (secret.length < 32 || placeholder) {
+    console.error(
+      [
+        "",
+        "SECRET_KEY is missing, too short, or a placeholder for the Production environment.",
+        "Add SECRET_KEY under Settings > Environment Variables (Production) with a unique random value of at least 32 characters:",
+        "  node -e \"console.log(require('crypto').randomBytes(48).toString('base64url'))\"",
+        "Then redeploy.",
+        "",
+      ].join("\n"),
+    );
+    process.exit(1);
+  }
+  if (!env.CRON_SECRET) console.warn("Warning: CRON_SECRET is not set, so the scheduled jobs under /api/cron will be refused.");
+  if (!env.BLOB_READ_WRITE_TOKEN) console.warn("Warning: BLOB_READ_WRITE_TOKEN is not set, so room image uploads will be unavailable.");
+}
+
 run("npx", ["prisma", "generate"]);
 
 // Production deployments always migrate. Preview deployments only do when asked to, so a branch with an

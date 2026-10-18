@@ -165,6 +165,22 @@ One Vercel project hosts everything.
 > **The build stops with a clear message** when no database is configured for Production, instead of failing deep inside Prisma.
 
 <details>
+<summary><strong>Troubleshooting a deployed site</strong></summary>
+
+Open the deployment in Vercel and read **Logs** (Runtime) for the exact cause; visitors only see a short message.
+
+| What you see | Meaning | Fix |
+| --- | --- | --- |
+| "The server is not fully configured" (`SERVER_NOT_CONFIGURED`) | A required setting is missing or invalid, usually `SECRET_KEY` | Set it for Production (32+ random characters) and redeploy |
+| "The database is not reachable or has not been set up" (`DATABASE_UNAVAILABLE`) | No connection, wrong credentials, or the tables were never created | Check `DATABASE_URL`/`POSTGRES_URL`; migrations only run on Production builds (see `MIGRATE_PREVIEW`) |
+| "Something went wrong on the server" (`INTERNAL_ERROR`) | An unexpected error | Find the stack trace in the runtime logs |
+| Build stops at "Cannot apply database migrations" | No `postgres://` URL is available to that environment | Enable the variable for Production, then redeploy |
+
+`GET /ready` reports configuration and database problems as `503` and answers `{"status":"ready"}` when both are fine.
+
+</details>
+
+<details>
 <summary><strong>Background jobs and Vercel limits</strong></summary>
 
 Check-in reminders, no-show marking and the demo reset cannot run as a long-lived process on Vercel.

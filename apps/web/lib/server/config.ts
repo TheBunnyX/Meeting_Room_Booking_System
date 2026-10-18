@@ -6,13 +6,21 @@ const PLACEHOLDER_SECRETS = new Set([
 ]);
 const DEVELOPMENT_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3002", "http://127.0.0.1:3002"];
 
+/** A deployment setting is missing or invalid. Reported to clients as 503 without naming the setting. */
+export class ConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ConfigError";
+  }
+}
+
 export type AppEnv = "development" | "test" | "production";
 
 function integer(name: string, fallback: number) {
   const raw = process.env[name];
   if (raw === undefined || raw === "") return fallback;
   const value = Number(raw);
-  if (!Number.isInteger(value) || value < 0) throw new Error(`${name} must be a non-negative integer`);
+  if (!Number.isInteger(value) || value < 0) throw new ConfigError(`${name} must be a non-negative integer`);
   return value;
 }
 
@@ -27,15 +35,15 @@ function load() {
   const env = appEnv();
   const isProduction = env === "production";
   const secretKey = process.env.SECRET_KEY ?? "";
-  if (!secretKey) throw new Error("SECRET_KEY is not set");
+  if (!secretKey) throw new ConfigError("SECRET_KEY is not set");
   if (isProduction && (PLACEHOLDER_SECRETS.has(secretKey) || secretKey.length < 32)) {
-    throw new Error("SECRET_KEY must be a unique random value of at least 32 characters in production");
+    throw new ConfigError("SECRET_KEY must be a unique random value of at least 32 characters in production");
   }
   const facilityTimezone = process.env.FACILITY_TIMEZONE || "Asia/Bangkok";
   try {
     new Intl.DateTimeFormat("en", { timeZone: facilityTimezone });
   } catch {
-    throw new Error(`FACILITY_TIMEZONE is not a known timezone: ${facilityTimezone}`);
+    throw new ConfigError(`FACILITY_TIMEZONE is not a known timezone: ${facilityTimezone}`);
   }
   const extra = (process.env.EXTRA_CORS_ORIGINS ?? "").split(",").map((item) => item.trim()).filter(Boolean);
   const origins = [process.env.FRONTEND_ORIGIN, ...extra].filter((item): item is string => Boolean(item));

@@ -1,7 +1,8 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { ZodError, type ZodType } from "zod";
 
-import { getConfig } from "./config";
+import { Prisma } from "@prisma/client";
+import { ConfigError, getConfig } from "./config";
 import { AppError, errorResponse } from "./errors";
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -33,12 +34,33 @@ export function toErrorResponse(error: unknown) {
     response = errorResponse(error.status, error.code, error.message, error.field, error.headers);
   } else if (error instanceof ZodError) {
     response = validationError(error);
+  } else if (error instanceof ConfigError) {
+    // The operator needs the exact setting, visitors do not: it goes to the server log only.
+    console.error(`Server configuration error: ${error.message}`);
+    response = errorResponse(
+      503,
+      "SERVER_NOT_CONFIGURED",
+      "The server is not fully configured. Ask the administrator to check the deployment settings.",
+    );
+  } else if (isDatabaseSetupError(error)) {
+    console.error("Database is unavailable or not migrated", error);
+    response = errorResponse(
+      503,
+      "DATABASE_UNAVAILABLE",
+      "The database is not reachable or has not been set up. Ask the administrator to check the deployment.",
+    );
   } else {
     console.error("Unhandled error", error);
     response = errorResponse(500, "INTERNAL_ERROR", "Something went wrong on the server");
   }
   response.headers.set("X-Content-Type-Options", "nosniff");
   return response;
+}
+
+/** Cannot connect, bad credentials, or a table/column that the migrations have not created. */
+export function isDatabaseSetupError(error: unknown) {
+  if (error instanceof Prisma.PrismaClientInitializationError) return true;
+  return error instanceof Prisma.PrismaClientKnownRequestError && ["P1001", "P1002", "P1017", "P2021", "P2022"].includes(error.code);
 }
 
 /**
