@@ -4,17 +4,15 @@ import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { apiFetch, errorMessage, safeNextPath } from "../../lib/api";
 import type { TokenResponse } from "../../lib/types";
+import demoAccounts from "../../data/demo-accounts.json";
 import { Icon } from "./icons";
 
-// The demo accounts in data/db.json. Shown in development only, unless
-// NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS says otherwise, so a production build never advertises them.
-const DEMO_ACCOUNTS = [
-  { role: "Admin", email: "admin@meetinghub.com", password: "Admin123!" },
-  { role: "User", email: "user@meetinghub.com", password: "User123!" },
-];
-const SHOW_DEMO_ACCOUNTS = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS
-  ? process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS === "true"
-  : process.env.NODE_ENV !== "production";
+// Every account of the starting data (data/demo-accounts.json, written by scripts/build-seed.mjs), so a demo can
+// switch between people without explaining anything. Set NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=false to hide the list.
+type DemoAccount = { email: string; name: string; password: string; role: string };
+const DEMO_ACCOUNTS = demoAccounts as DemoAccount[];
+const SHOW_DEMO_ACCOUNTS = process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS !== "false";
+const ROLE_LABELS: Record<string, string> = { ADMIN: "Admin", FACILITY_ADMIN: "Facility admin", USER: "User" };
 
 /** The sign-in form. It is the home page for visitors who are not signed in. */
 export function LoginForm() {
@@ -22,7 +20,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function fillDemoAccount(account: (typeof DEMO_ACCOUNTS)[number]) {
+  function fillDemoAccount(account: DemoAccount) {
     const form = formRef.current;
     if (!form) return;
     (form.elements.namedItem("email") as HTMLInputElement).value = account.email;
@@ -69,10 +67,10 @@ export function LoginForm() {
     </form>
     <p className="helper"><Link className="text-link" href="/forgot-password">Forgot your password?</Link> · Need access? Ask your workspace administrator.</p>
     {SHOW_DEMO_ACCOUNTS && <section className="demo-accounts" aria-labelledby="demo-accounts-title">
-      <p className="eyebrow" id="demo-accounts-title">Demo accounts</p>
+      <p className="eyebrow" id="demo-accounts-title">Demo accounts ({DEMO_ACCOUNTS.length})</p>
       <ul>
         {DEMO_ACCOUNTS.map((account) => <li key={account.email}>
-          <div><strong>{account.role}</strong><small>{account.email} / {account.password}</small></div>
+          <div><strong>{account.name} · {ROLE_LABELS[account.role] ?? account.role}</strong><small>{account.email} / {account.password}</small></div>
           <button type="button" className="text-button" onClick={() => fillDemoAccount(account)}>Use</button>
         </li>)}
       </ul>

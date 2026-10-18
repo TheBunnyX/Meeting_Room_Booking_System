@@ -209,7 +209,9 @@ describe("approval workflow", () => {
     expect((await post(`/api/v1/bookings/${created.body.id}/approve`)).status).toBe(403);
     await app.signIn(...ADMIN);
     expect((await app.call("GET", "/api/v1/bookings/pending")).body).toHaveLength(1);
-    expect(app.data().data.notifications.filter((item) => item.title === "Booking awaiting approval")).toHaveLength(1);
+    // Both managers of the demo data (the administrator and the facility manager) are told, the requester is not.
+    const told = app.data().data.notifications.filter((item) => item.title === "Booking awaiting approval").map((item) => item.user_id).sort();
+    expect(told).toEqual([userId(app, ADMIN[0]), userId(app, "facility@meetinghub.com")].sort());
     expect((await post(`/api/v1/bookings/${created.body.id}/approve`)).body.status).toBe("CONFIRMED");
     expect((await post(`/api/v1/bookings/${created.body.id}/approve`)).body.error.code).toBe("BOOKING_NOT_PENDING");
     await app.signIn(...USER);

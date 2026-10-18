@@ -103,14 +103,19 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3000> and sign in with a demo account:
+Open <http://localhost:3000>. The sign-in page lists every demo account, with a button that fills the form, so a demo
+can switch between people without explaining anything:
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@meetinghub.com` | `Admin123!` |
-| User | `user@meetinghub.com` | `User123!` |
+| Role | Name | Email | Password |
+| --- | --- | --- | --- |
+| Admin | System Administrator | `admin@meetinghub.com` | `Admin123!` |
+| Facility admin | Facility Manager | `facility@meetinghub.com` | `Facility123!` |
+| User | MeetingHub User | `user@meetinghub.com` | `User123!` |
+| User | Somchai Jaidee | `somchai@meetinghub.com` | `User123!` |
+| User | Nattaya Srisuk | `nattaya@meetinghub.com` | `User123!` |
 
-The demo accounts are listed on the sign-in page in development. To start over, clear the site's data in your browser
+The list comes from [data/demo-accounts.json](apps/web/data/demo-accounts.json); set `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=false`
+to hide it. A browser that already holds older data gets any new demo accounts added automatically. To start over, clear the site's data in your browser
 (DevTools → Application → Local storage, remove `meetinghub_db_v1` and `meetinghub_session`).
 
 ## Changing the starting data
@@ -122,7 +127,7 @@ To change the users, equipment or rooms, edit the lists at the top of
 [scripts/build-seed.mjs](apps/web/scripts/build-seed.mjs) and run:
 
 ```bash
-npm run seed:build                      # rewrites data/db.json, hashing the demo passwords
+npm run seed:build                      # rewrites data/db.json and data/demo-accounts.json
 npm run password:hash -- "a password"   # prints a hash to paste into data/db.json by hand
 ```
 
@@ -136,8 +141,8 @@ There is nothing to configure.
 1. Import the repository in Vercel and set **Root Directory** to `apps/web`.
 2. Deploy. The default Next.js build is used (`npm run build`).
 3. Optional: set `NEXT_PUBLIC_APP_URL` to your public address (used in the sitemap and social previews; the Vercel
-   production domain is picked up automatically) and `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=true` to list the demo accounts on
-   the sign-in page.
+   production domain is picked up automatically) and `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=false` to hide the demo accounts
+   on the sign-in page.
 
 No database, storage, cron job or secret is needed. See [.env.example](apps/web/.env.example) for the optional variables.
 

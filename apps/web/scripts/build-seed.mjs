@@ -4,9 +4,14 @@ import { writeFileSync } from "node:fs";
 
 import { hashPassword } from "./hash-password.mjs";
 
+// [email, name, password, role, department]. These are demo accounts: the passwords are public (see
+// data/demo-accounts.json, which the sign-in page lists), so never reuse a real password here.
 const users = [
-  ["admin@meetinghub.com", "System Administrator", "Admin123!", "ADMIN"],
-  ["user@meetinghub.com", "MeetingHub User", "User123!", "USER"],
+  ["admin@meetinghub.com", "System Administrator", "Admin123!", "ADMIN", "IT"],
+  ["facility@meetinghub.com", "Facility Manager", "Facility123!", "FACILITY_ADMIN", "Facilities"],
+  ["user@meetinghub.com", "MeetingHub User", "User123!", "USER", null],
+  ["somchai@meetinghub.com", "Somchai Jaidee", "User123!", "USER", "Sales"],
+  ["nattaya@meetinghub.com", "Nattaya Srisuk", "User123!", "USER", "Marketing"],
 ];
 const facilityNames = ["TV", "Projector", "Whiteboard", "Video Conference", "HDMI"];
 const rooms = [
@@ -22,11 +27,11 @@ const facilities = facilityNames.map((name, index) => ({ id: index + 1, name }))
 const facilityId = (name) => facilities.find((facility) => facility.name === name).id;
 
 const data = {
-  users: users.map(([email, full_name, password, role], index) => ({
+  users: users.map(([email, full_name, password, role, department], index) => ({
     id: index + 1,
     email,
     full_name,
-    department: null,
+    department,
     team: null,
     role,
     is_active: true,
@@ -50,4 +55,8 @@ const data = {
 };
 
 writeFileSync(new URL("../data/db.json", import.meta.url), `${JSON.stringify(data, null, 2)}\n`);
+
+// The sign-in page lists these so a demo needs no explaining. Plain passwords on purpose; see the note above.
+const demoAccounts = users.map(([email, name, password, role]) => ({ email, name, password, role }));
+writeFileSync(new URL("../data/demo-accounts.json", import.meta.url), `${JSON.stringify(demoAccounts, null, 2)}\n`);
 console.log(`Wrote data/db.json: ${data.users.length} users, ${data.facilities.length} facilities, ${data.rooms.length} rooms`);

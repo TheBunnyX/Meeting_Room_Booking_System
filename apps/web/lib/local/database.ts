@@ -119,6 +119,19 @@ function fromSeed(): Data {
   };
 }
 
+/**
+ * A browser that opened an older version of the app has only the users it had then. Accounts that the starting data
+ * has gained since (new demo users) are added, so they can sign in without clearing anything. Nothing is changed or removed.
+ */
+function addMissingSeedUsers(data: Data) {
+  const known = new Set(data.users.map((user) => user.email));
+  for (const user of fromSeed().users) {
+    if (known.has(user.email)) continue;
+    const id = data.users.reduce((highest, row) => Math.max(highest, row.id), 0) + 1;
+    data.users.push({ ...user, id });
+  }
+}
+
 export class Database {
   private constructor(
     readonly data: Data,
@@ -138,7 +151,10 @@ export class Database {
       }
     }
     data ??= fromSeed();
-    return new Database(data, storage, JSON.stringify(data));
+    // What is stored now; if the next step adds anything, the difference makes the next save write it.
+    const baseline = JSON.stringify(data);
+    addMissingSeedUsers(data);
+    return new Database(data, storage, baseline);
   }
 
   /** Write the data back, but only when something changed. */

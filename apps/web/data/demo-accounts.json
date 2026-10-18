@@ -1,0 +1,32 @@
+[
+  {
+    "email": "admin@meetinghub.com",
+    "name": "System Administrator",
+    "password": "Admin123!",
+    "role": "ADMIN"
+  },
+  {
+    "email": "facility@meetinghub.com",
+    "name": "Facility Manager",
+    "password": "Facility123!",
+    "role": "FACILITY_ADMIN"
+  },
+  {
+    "email": "user@meetinghub.com",
+    "name": "MeetingHub User",
+    "password": "User123!",
+    "role": "USER"
+  },
+  {
+    "email": "somchai@meetinghub.com",
+    "name": "Somchai Jaidee",
+    "password": "User123!",
+    "role": "USER"
+  },
+  {
+    "email": "nattaya@meetinghub.com",
+    "name": "Nattaya Srisuk",
+    "password": "User123!",
+    "role": "USER"
+  }
+]

@@ -4,15 +4,26 @@
       "id": 1,
       "email": "admin@meetinghub.com",
       "full_name": "System Administrator",
-      "department": null,
+      "department": "IT",
       "team": null,
       "role": "ADMIN",
       "is_active": true,
       "must_change_password": false,
-      "password_hash": "pbkdf2-sha256$100000$e16098d704ddc5b7c1588c1e831c08e9$7bd3a59a4c5208332cdee761e3518e8ebe6cf1593c62ed02912f7d17084be4a4"
+      "password_hash": "pbkdf2-sha256$100000$98c266db295ed88030d8bc950685d9d2$38e9f965c7b6dc06ab603b14ed7530cec1bfb0726c538aa5111570761630df14"
     },
     {
       "id": 2,
+      "email": "facility@meetinghub.com",
+      "full_name": "Facility Manager",
+      "department": "Facilities",
+      "team": null,
+      "role": "FACILITY_ADMIN",
+      "is_active": true,
+      "must_change_password": false,
+      "password_hash": "pbkdf2-sha256$100000$205851de6e43b892ed650d0fe36cbe60$3cc2f67e56f22090197822c50d6ba9eb5b3328531acf057906ac5bbc77b7c038"
+    },
+    {
+      "id": 3,
       "email": "user@meetinghub.com",
       "full_name": "MeetingHub User",
       "department": null,
@@ -20,7 +31,29 @@
       "role": "USER",
       "is_active": true,
       "must_change_password": false,
-      "password_hash": "pbkdf2-sha256$100000$5b6c03c984e3f130176b76e94e8e88a3$7e0f4a6bb3e4d238bc1f42b1e46301c4e5b8f7ff5b5159e756ed8f4d3712f4f2"
+      "password_hash": "pbkdf2-sha256$100000$425ce54cba731e91a8ff2470caf5cf15$be213fe59e2c8bcc4c08497880d5687ee844bcca32961591b74f6637d5bca2d2"
+    },
+    {
+      "id": 4,
+      "email": "somchai@meetinghub.com",
+      "full_name": "Somchai Jaidee",
+      "department": "Sales",
+      "team": null,
+      "role": "USER",
+      "is_active": true,
+      "must_change_password": false,
+      "password_hash": "pbkdf2-sha256$100000$dd27b94c0be28a65b2b01d3ce576e4fc$1a8dc8d203494f3a9cbc5aaf78fdc2d517a8477d1ecf9015b851bcaf33b80f7b"
+    },
+    {
+      "id": 5,
+      "email": "nattaya@meetinghub.com",
+      "full_name": "Nattaya Srisuk",
+      "department": "Marketing",
+      "team": null,
+      "role": "USER",
+      "is_active": true,
+      "must_change_password": false,
+      "password_hash": "pbkdf2-sha256$100000$dfaf99094480a159181fdb372026d968$41d45129d23bf4a3c77623ca553a519d8f1d6ff42bd3e15b90fff841d666da11"
     }
   ],
   "facilities": [
