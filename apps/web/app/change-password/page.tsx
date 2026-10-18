@@ -14,7 +14,7 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState<{ message: string; field: string | null } | null>(null);
 
   useEffect(() => {
-    // Signed-out visitors are sent to /login by apiFetch.
+    // Signed-out visitors are sent to the sign-in form by apiFetch.
     apiFetch<User>("/api/v1/auth/me").then(setUser).catch((reason) => {
       if (reason?.status !== 401) setError({ message: errorMessage(reason, "Your session could not be loaded."), field: null });
     });

@@ -9,7 +9,7 @@ type Session = { user: User | null; loading: boolean; error: string; retry: () =
 /**
  * The signed-in user, loaded from the API. The session lives in an HTTP-only cookie, so asking
  * the API is the only way to know who is signed in; apiFetch sends visitors without a session
- * to /login and users with a temporary password to /change-password.
+ * to the home page (the sign-in form) and users with a temporary password to /change-password.
  */
 export function useSession(): Session {
   const [user, setUser] = useState<User | null>(null);
@@ -28,7 +28,7 @@ export function useSession(): Session {
         else setUser(profile);
       })
       .catch((reason) => {
-        // A 401 is already on its way to /login; only surface failures the user can retry.
+        // A 401 is already on its way to the sign-in form; only surface failures the user can retry.
         if (!cancelled && reason?.status !== 401) setError(errorMessage(reason, "Your session could not be loaded."));
       })
       .finally(() => {
@@ -46,7 +46,7 @@ export function useSession(): Session {
     } catch {
       // Already signed out, or offline: the sign-in page is still the right place to land.
     }
-    window.location.assign("/login");
+    window.location.assign("/");
   }, []);
 
   return { user, loading, error, retry, signOut };

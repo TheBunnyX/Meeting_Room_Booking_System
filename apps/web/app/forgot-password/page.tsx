@@ -31,11 +31,11 @@ export default function ForgotPasswordPage() {
   }
 
   return <main className="login-page"><div className="login-wrap">
-    <Link className="brand" href="/login"><span className="brand-mark" aria-hidden="true">M</span><span>MeetingHub</span></Link>
+    <Link className="brand" href="/"><span className="brand-mark" aria-hidden="true">M</span><span>MeetingHub</span></Link>
     <p className="eyebrow">Account access</p><h1 className="login-title">Forgot password?</h1>
     {sent ? <>
       <p role="status">{sent} They will give you a temporary password, which you replace the first time you sign in.</p>
-      <Link className="primary" href="/login">Back to sign in <Icon name="right" size={15} /></Link>
+      <Link className="primary" href="/">Back to sign in <Icon name="right" size={15} /></Link>
     </> : <>
       <p>Enter your work email. A workspace administrator will be asked to issue you a temporary password.</p>
       <form className="login-form" onSubmit={submit}>
@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
         {error && <p className="error" role="alert">{error}</p>}
         <button className="primary" type="submit" disabled={sending}>{sending ? "Sending…" : <>Request a reset <Icon name="right" size={15} /></>}</button>
       </form>
-      <p className="helper"><Link className="text-link" href="/login">Back to sign in</Link></p>
+      <p className="helper"><Link className="text-link" href="/">Back to sign in</Link></p>
     </>}
   </div></main>;
 }

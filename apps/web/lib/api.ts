@@ -47,11 +47,11 @@ function redirectTo(path: string) {
   if (typeof window !== "undefined" && window.location.pathname !== path.split("?")[0]) window.location.assign(path);
 }
 
-/** The sign-in page, remembering the page the visitor was trying to open. */
+/** The sign-in form (the home page), remembering the page the visitor was trying to open. */
 function loginPath() {
-  if (typeof window === "undefined") return "/login";
+  if (typeof window === "undefined") return "/";
   const current = `${window.location.pathname}${window.location.search ?? ""}`;
-  return current === "/" ? "/login" : `/login?next=${encodeURIComponent(current)}`;
+  return current === "/" ? "/" : `/?next=${encodeURIComponent(current)}`;
 }
 
 async function send(path: string, options: ApiOptions): Promise<Response> {

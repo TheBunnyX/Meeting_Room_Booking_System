@@ -68,7 +68,7 @@ describe("apiFetch", () => {
 
     await apiFetch("/api/v1/bookings/my").catch(() => undefined);
     // The page being opened is remembered so signing in can return to it.
-    expect(assign).toHaveBeenCalledWith("/login?next=%2Fbookings");
+    expect(assign).toHaveBeenCalledWith("/?next=%2Fbookings");
 
     assign.mockClear();
     respondWith({ error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password", field: null } }, 401);
@@ -95,17 +95,17 @@ describe("sign-in return path", () => {
 
     await apiFetch("/api/v1/rooms/3/check-in", { method: "POST" }).catch(() => undefined);
 
-    expect(assign).toHaveBeenCalledWith("/login?next=%2Fcheck-in%3Froom%3D3");
+    expect(assign).toHaveBeenCalledWith("/?next=%2Fcheck-in%3Froom%3D3");
   });
 
-  it("goes to the plain sign-in page from the home page", async () => {
+  it("stays on the home page, which already shows the sign-in form", async () => {
     const assign = vi.fn();
     vi.stubGlobal("window", { location: { pathname: "/", search: "", assign } });
     respondWith({ error: { code: "UNAUTHENTICATED", message: "Sign in to continue", field: null } }, 401);
 
     await apiFetch("/api/v1/auth/me").catch(() => undefined);
 
-    expect(assign).toHaveBeenCalledWith("/login");
+    expect(assign).not.toHaveBeenCalled();
   });
 
   it("only accepts paths on this site", () => {

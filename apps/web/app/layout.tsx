@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   creator: SITE_NAME,
   publisher: SITE_NAME,
   // Everything behind the sign-in is private, so pages are kept out of search results by default.
-  // Only the public sign-in page opts back in (see app/login/layout.tsx).
+  // Only the home page, which shows the sign-in form, opts back in (see app/page.tsx).
   robots: { index: false, follow: false },
   openGraph: {
     type: "website",
