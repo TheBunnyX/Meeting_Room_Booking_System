@@ -1,9 +1,12 @@
 // Build step used by Vercel (see vercel.json): generate the Prisma client, apply migrations, build Next.js.
 import { spawnSync } from "node:child_process";
 
+import { describeDatabaseVariables, resolveDatabaseUrl } from "../lib/server/database-url.mjs";
+
 const env = { ...process.env };
-// The Vercel Prisma Postgres integration provides POSTGRES_URL; use it when DATABASE_URL is not set.
-env.DATABASE_URL ||= env.POSTGRES_URL;
+// Prisma reads DATABASE_URL; fill it from POSTGRES_URL or a prefixed variable from the Vercel integration.
+const databaseUrl = resolveDatabaseUrl(env);
+if (databaseUrl) env.DATABASE_URL = databaseUrl;
 
 function run(command, args) {
   const result = spawnSync(command, args, { stdio: "inherit", env, shell: process.platform === "win32" });
@@ -18,21 +21,19 @@ const vercelEnv = env.VERCEL_ENV;
 const migrate = !vercelEnv || vercelEnv === "production" || env.MIGRATE_PREVIEW === "true";
 
 if (migrate) {
-  if (!env.DATABASE_URL) {
+  if (!databaseUrl) {
+    const found = describeDatabaseVariables(env);
     console.error(
       [
         "",
-        "Cannot apply database migrations: no database is configured.",
-        "Add Prisma Postgres under Storage (it provides POSTGRES_URL), or set DATABASE_URL to a postgres:// connection string,",
-        "for the Production environment, then redeploy.",
+        `Cannot apply database migrations: no PostgreSQL connection string is available to this ${vercelEnv ?? "build"} environment.`,
+        `Database-related variables found: ${found.length ? found.join(", ") : "none"}.`,
+        "",
+        "Fix: in Vercel open Settings > Environment Variables and make sure DATABASE_URL (or POSTGRES_URL from the Prisma Postgres",
+        "integration) is set with a postgres:// value and is enabled for the Production environment. If the database was added",
+        "under Storage, check that it is connected to this project for Production. Then redeploy.",
         "",
       ].join("\n"),
-    );
-    process.exit(1);
-  }
-  if (env.DATABASE_URL.startsWith("prisma+postgres://")) {
-    console.error(
-      "\nDATABASE_URL is a prisma+postgres:// (Accelerate) URL. Use the direct postgres:// connection string (POSTGRES_URL).\n",
     );
     process.exit(1);
   }

@@ -1,13 +1,14 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { resolveDatabaseUrl } from "./database-url.mjs";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function databaseUrl() {
-  // The Vercel Prisma Postgres integration provides POSTGRES_URL (direct) next to PRISMA_DATABASE_URL.
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (url?.startsWith("prisma+postgres://")) {
+  // DATABASE_URL, or POSTGRES_URL from the Vercel Prisma Postgres integration (also with a custom prefix).
+  const url = resolveDatabaseUrl(process.env);
+  if (!url && Object.values(process.env).some((value) => value?.startsWith("prisma+postgres://"))) {
     throw new Error(
-      "DATABASE_URL is a prisma+postgres:// (Accelerate) URL. Use the direct postgres:// connection string, POSTGRES_URL on Vercel.",
+      "Only a prisma+postgres:// (Accelerate) URL is configured. Use the direct postgres:// connection string, POSTGRES_URL on Vercel.",
     );
   }
   return url;
