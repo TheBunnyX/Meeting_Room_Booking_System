@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  FACILITY_ADMIN
+}
+
+enum BookingStatus {
+  CONFIRMED
+  PENDING_APPROVAL
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  REJECTED
+}
+
+model User {
+  id                 Int      @id @default(autoincrement())
+  email              String   @unique @db.VarChar(255)
+  fullName           String   @map("full_name") @db.VarChar(150)
+  passwordHash       String   @map("password_hash") @db.VarChar(255)
+  department         String?  @db.VarChar(100)
+  team               String?  @db.VarChar(100)
+  role               Role     @default(USER)
+  isActive           Boolean  @default(true) @map("is_active")
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  // Embedded in every session token; bumping it revokes the user's existing sessions.
+  tokenVersion       Int      @default(0) @map("token_version")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  bookings      Booking[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model Facility {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique @db.VarChar(80)
+  icon  String? @db.VarChar(40)
+  rooms Room[]
+
+  @@map("facilities")
+}
+
+model Room {
+  id               Int       @id @default(autoincrement())
+  name             String    @unique @db.VarChar(120)
+  building         String    @db.VarChar(100)
+  floor            String    @db.VarChar(30)
+  capacity         Int
+  imageUrl         String?   @map("image_url") @db.VarChar(500)
+  opensAt          String    @default("08:00") @map("opens_at") @db.VarChar(5)
+  closesAt         String    @default("18:00") @map("closes_at") @db.VarChar(5)
+  requiresApproval Boolean   @default(false) @map("requires_approval")
+  isActive         Boolean   @default(true) @map("is_active")
+  facilities       Facility[]
+  bookings         Booking[]
+  maintenance      Maintenance[]
+
+  @@index([building])
+  @@map("rooms")
+}
+
+// The bookings_no_overlap exclusion constraint (added by hand in the first migration, because
+// Prisma cannot model it) guarantees that two CONFIRMED / PENDING_APPROVAL bookings never overlap
+// in the same room.
+model Booking {
+  id                   Int           @id @default(autoincrement())
+  roomId               Int           @map("room_id")
+  organizerId          Int           @map("organizer_id")
+  title                String        @db.VarChar(200)
+  description          String?
+  attendeeCount        Int           @map("attendee_count")
+  startsAt             DateTime      @map("starts_at") @db.Timestamptz(6)
+  endsAt               DateTime      @map("ends_at") @db.Timestamptz(6)
+  status               BookingStatus @default(CONFIRMED)
+  recurrenceRule       String?       @map("recurrence_rule") @db.VarChar(200)
+  checkedInAt          DateTime?     @map("checked_in_at") @db.Timestamptz(6)
+  // Shared by every occurrence created from one recurring request.
+  seriesId             String?       @map("series_id") @db.VarChar(32)
+  // Reason recorded by the manager who rejected the request.
+  decisionNote         String?       @map("decision_note") @db.VarChar(300)
+  checkInReminderSent  Boolean       @default(false) @map("check_in_reminder_sent")
+
+  room         Room                 @relation(fields: [roomId], references: [id])
+  organizer    User                 @relation(fields: [organizerId], references: [id])
+  participants BookingParticipant[]
+  checkIn      CheckIn?
+
+  @@index([roomId])
+  @@index([organizerId])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([seriesId])
+  @@map("bookings")
+}
+
+model BookingParticipant {
+  id        Int     @id @default(autoincrement())
+  bookingId Int     @map("booking_id")
+  email     String  @db.VarChar(255)
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, email])
+  @@map("booking_participants")
+}
+
+model Maintenance {
+  id       Int      @id @default(autoincrement())
+  roomId   Int      @map("room_id")
+  startsAt DateTime @map("starts_at") @db.Timestamptz(6)
+  endsAt   DateTime @map("ends_at") @db.Timestamptz(6)
+  reason   String   @db.VarChar(300)
+  room     Room     @relation(fields: [roomId], references: [id])
+
+  @@index([roomId])
+  @@map("maintenance")
+}
+
+model CheckIn {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int      @unique @map("booking_id")
+  checkedInBy Int      @map("checked_in_by")
+  checkedInAt DateTime @default(now()) @map("checked_in_at") @db.Timestamptz(6)
+  method      String   @default("QR") @db.VarChar(30)
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("check_ins")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  title     String   @db.VarChar(200)
+  message   String
+  // Frontend path to open when the notification is clicked.
+  link      String?  @db.VarChar(200)
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  action    String   @db.VarChar(100)
+  entity    String   @db.VarChar(100)
+  entityId  String?  @map("entity_id") @db.VarChar(50)
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// Failed sign-in / password-reset attempts. Serverless instances share no memory, so the
+// sliding-window rate limiter keeps its events here.
+model RateLimitEvent {
+  id        BigInt   @id @default(autoincrement())
+  bucket    String   @db.VarChar(40)
+  key       String   @db.VarChar(320)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([bucket, key, createdAt])
+  @@map("rate_limit_events")
+}
+
+// One row per background job; lets any instance claim a run atomically so a job never runs twice
+// at once and can be throttled without a long-lived process.
+model JobState {
+  name      String   @id @db.VarChar(50)
+  lastRunAt DateTime @map("last_run_at") @db.Timestamptz(6)
+
+  @@map("job_state")
+}
