@@ -8,7 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/login",
       // Signed-in pages and the API are private; keep crawlers away from them.
       disallow: [
-        "/api/",
         "/admin",
         "/bookings",
         "/calendar",

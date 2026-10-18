@@ -4,9 +4,7 @@ const nextConfig = {
   poweredByHeader: false,
   images: {
     formats: ["image/avif", "image/webp"],
-    // Uploaded images get a new unique URL every time, so optimized copies can be cached for a long time.
     minimumCacheTTL: 60 * 60 * 24 * 30,
-    remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
   },
   async headers() {
     return [

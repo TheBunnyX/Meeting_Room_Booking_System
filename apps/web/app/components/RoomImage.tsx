@@ -1,9 +1,6 @@
 import Image from "next/image";
 import { assetUrl } from "../../lib/api";
 
-// Hosts next.config.mjs lets the image optimizer fetch from.
-const STORED_IMAGE = /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//;
-
 type RoomImageProps = {
   src: string | null | undefined;
   alt: string;
@@ -15,14 +12,14 @@ type RoomImageProps = {
 };
 
 /**
- * Fills its positioned parent. Bundled photos and uploaded Vercel Blob images go through the Next.js
- * optimizer (resized, AVIF/WebP, cached); an arbitrary external URL entered by an admin is shown as is.
+ * Fills its positioned parent. Photos bundled with the app (/rooms/...) go through the Next.js optimizer (resized,
+ * AVIF/WebP, cached). A photo uploaded in the browser is already a small data URL, and an external URL typed by an
+ * admin cannot be optimized, so both are shown as they are.
  */
 export function RoomImage({ src, alt, className, sizes, priority = false }: RoomImageProps) {
   const url = assetUrl(src);
-  const optimizable = (url.startsWith("/") && !url.startsWith("//")) || STORED_IMAGE.test(url);
-  if (!optimizable) {
-    // eslint-disable-next-line @next/next/no-img-element -- arbitrary host, not allowed for the optimizer
+  if (!url.startsWith("/") || url.startsWith("//")) {
+    // eslint-disable-next-line @next/next/no-img-element -- a data URL or an arbitrary host, not usable by the optimizer
     return <img className={className} src={url} alt={alt} loading={priority ? "eager" : "lazy"} decoding="async" />;
   }
   return <Image className={className} src={url} alt={alt} fill sizes={sizes} priority={priority} />;

@@ -1,6 +1,4 @@
-// The API is served by this same Next.js app (app/api/v1), so requests are same-origin by default and
-// the session cookie is first-party. Set NEXT_PUBLIC_API_URL only to point at a different API host.
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+import { localFetch } from "./local/client";
 
 /** A failed API call, carrying the backend's stable `{ error: { code, message, field } }` shape. */
 export class ApiError extends Error {
@@ -57,17 +55,13 @@ function loginPath() {
 }
 
 async function send(path: string, options: ApiOptions): Promise<Response> {
-  const { json, redirectOnUnauthorized = true, headers, ...init } = options;
+  const { json, redirectOnUnauthorized = true, method, body } = options;
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
-      ...init,
-      credentials: "include",
-      headers: { ...(json === undefined ? {} : { "Content-Type": "application/json" }), ...headers },
-      body: json === undefined ? init.body : JSON.stringify(json),
-    });
+    // The API runs inside the browser (see lib/local), with its data kept in localStorage.
+    response = await localFetch(path, { method, json, body });
   } catch {
-    throw new ApiError("The server could not be reached. Check your connection and try again.", 0, "NETWORK_ERROR");
+    throw new ApiError("The request could not be completed. Please try again.", 0, "NETWORK_ERROR");
   }
   if (!response.ok) {
     const error = await toApiError(response);
@@ -78,7 +72,7 @@ async function send(path: string, options: ApiOptions): Promise<Response> {
   return response;
 }
 
-/** The single entry point for calling the backend. Sessions travel in an HTTP-only cookie. */
+/** The single entry point for calling the API. The session is kept by the in-browser API. */
 export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const response = await send(path, options);
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);

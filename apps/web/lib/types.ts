@@ -1,4 +1,4 @@
-// Shapes returned by the FastAPI backend (see /openapi.json). Keep in sync with app/schemas.py.
+// Shapes returned by the in-browser API (see lib/local/handlers). Keep in sync with them.
 
 export type Role = "USER" | "ADMIN" | "FACILITY_ADMIN";
 export type BookingStatus = "CONFIRMED" | "PENDING_APPROVAL" | "CANCELLED" | "COMPLETED" | "NO_SHOW" | "REJECTED";

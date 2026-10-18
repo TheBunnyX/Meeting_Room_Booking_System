@@ -72,14 +72,14 @@ export function RoomsPanel({ rooms, facilities, perform }: RoomsPanelProps) {
         <label><input name="is_active" type="checkbox" defaultChecked={editingRoom.is_active} /> Active room</label>
         <div className="room-image-tools">
           {editingRoom.image_url
-            // eslint-disable-next-line @next/next/no-img-element -- served by the API origin or an arbitrary URL
+            // eslint-disable-next-line @next/next/no-img-element -- a stored photo or an arbitrary URL
             ? <img className="room-image-preview" src={assetUrl(editingRoom.image_url)} alt={`${editingRoom.name} preview`} />
             : <p className="empty">No room image.</p>}
           <div className="room-image-actions">
             <label className="text-button upload-button">Upload image<input type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={saving} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadImage(editingRoom, file); event.currentTarget.value = ""; }} /></label>
             {editingRoom.image_url && <button type="button" className="text-button danger" disabled={saving} onClick={() => deleteImage(editingRoom)}>Delete image</button>}
           </div>
-          <small>JPG, PNG or WebP · max 4 MB</small>
+          <small>JPG, PNG or WebP · max 5 MB</small>
         </div>
       </>}
       <fieldset className="facility-checks"><legend>Facilities</legend>{facilities.map((item) => <label key={item.id}><input name={`facility-${item.id}`} type="checkbox" defaultChecked={editingRoom?.facility_ids.includes(item.id) ?? false} /> {item.name}</label>)}</fieldset>

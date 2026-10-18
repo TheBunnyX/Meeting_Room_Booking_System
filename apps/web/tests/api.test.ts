@@ -1,41 +1,42 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { API_URL, ApiError, apiFetch, assetUrl, errorMessage, safeNextPath } from "../lib/api";
+import { ApiError, apiFetch, assetUrl, errorMessage, safeNextPath } from "../lib/api";
+
+// apiFetch talks to the in-browser API through localFetch; these tests replace it to check what the UI does
+// with the answers. The API itself is covered in tests/local.
+const localFetch = vi.hoisted(() => vi.fn());
+vi.mock("../lib/local/client", () => ({ localFetch }));
 
 function respondWith(body: unknown, status = 200) {
-  const fetchMock = vi.fn().mockResolvedValue(
+  localFetch.mockResolvedValue(
     new Response(body === undefined ? null : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }),
   );
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  localFetch.mockReset();
+  vi.unstubAllGlobals();
+});
 
 describe("apiFetch", () => {
-  it("sends the session cookie and a JSON body", async () => {
-    const fetchMock = respondWith({ id: 1 }, 201);
+  it("sends the method, path and a JSON body to the in-browser API", async () => {
+    respondWith({ id: 1 }, 201);
 
     const result = await apiFetch<{ id: number }>("/api/v1/bookings", { method: "POST", json: { title: "Sync" } });
 
     expect(result).toEqual({ id: 1 });
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe(`${API_URL}/api/v1/bookings`);
-    expect(init.credentials).toBe("include");
-    expect(init.headers).toEqual({ "Content-Type": "application/json" });
-    expect(init.body).toBe('{"title":"Sync"}');
+    expect(localFetch).toHaveBeenCalledWith("/api/v1/bookings", { method: "POST", json: { title: "Sync" }, body: undefined });
   });
 
-  it("lets the browser set the content type for uploads", async () => {
-    const fetchMock = respondWith({ id: 1 });
+  it("passes uploads through as they are", async () => {
+    respondWith({ id: 1 });
     const body = new FormData();
 
     await apiFetch("/api/v1/rooms/1/image", { method: "POST", body });
 
-    expect(fetchMock.mock.calls[0][1].headers).toEqual({});
-    expect(fetchMock.mock.calls[0][1].body).toBe(body);
+    expect(localFetch.mock.calls[0][1].body).toBe(body);
   });
 
-  it("turns the backend error shape into an ApiError", async () => {
+  it("turns the error shape into an ApiError", async () => {
     respondWith({ error: { code: "ROOM_UNAVAILABLE", message: "Room is already booked", field: "starts_at" } }, 409);
 
     const error = await apiFetch("/api/v1/bookings", { method: "POST", json: {} }).catch((reason) => reason);
@@ -45,15 +46,15 @@ describe("apiFetch", () => {
   });
 
   it("falls back to a generic message for non-JSON errors", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>Bad gateway</html>", { status: 502 })));
+    localFetch.mockResolvedValue(new Response("<html>Bad gateway</html>", { status: 502 }));
 
     const error = await apiFetch("/api/v1/rooms").catch((reason) => reason);
 
     expect(error).toMatchObject({ status: 502, code: "ERROR", message: "The request could not be completed." });
   });
 
-  it("reports an unreachable server as a network error", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+  it("reports a failure to run the request as a network error", async () => {
+    localFetch.mockRejectedValue(new Error("chunk failed to load"));
 
     const error = await apiFetch("/api/v1/rooms").catch((reason) => reason);
 
@@ -125,12 +126,10 @@ describe("errorMessage", () => {
 });
 
 describe("assetUrl", () => {
-  it("serves uploaded images from the API origin", () => {
-    expect(assetUrl("/uploads/rooms/abc.png")).toBe(`${API_URL}/uploads/rooms/abc.png`);
-  });
-
-  it("leaves bundled and external images alone and falls back when missing", () => {
+  it("leaves bundled, uploaded and external images alone and falls back when missing", () => {
+    const uploaded = "data:image/jpeg;base64,/9j/4AAQ";
     expect(assetUrl("/rooms/the-loft.png")).toBe("/rooms/the-loft.png");
+    expect(assetUrl(uploaded)).toBe(uploaded);
     expect(assetUrl("https://cdn.example.com/room.png")).toBe("https://cdn.example.com/room.png");
     expect(assetUrl(null)).toBe("/rooms/studio-01.png");
   });

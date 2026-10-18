@@ -65,6 +65,7 @@ export function CheckInScreen() {
       ? <img className="checkin-qr" src={image} alt={`QR code to check in to ${roomName}`} />
       : !error && <p className="empty" role="status">Generating the code…</p>}
     {image && <p className="checkin-help">Scan with your phone to check in to your booking.<br />The code renews itself every {REFRESH_MS / 1000} seconds.</p>}
+    {image && <p className="checkin-warning">The data of this app is stored in each browser, so a code is only accepted by the browser that shows it. Phones that scan it need to use this same browser profile.</p>}
     {error && <p className="error" role="alert">{error}</p>}
     {origin && isLoopbackOrigin(origin) && <p className="checkin-warning" role="alert">
       This code points to <strong>{origin}</strong>, which only works on this computer. Open this screen from the address people use to reach the site, or set <code>NEXT_PUBLIC_APP_URL</code>.

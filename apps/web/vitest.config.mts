@@ -3,13 +3,5 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
-  test: {
-    environment: "node",
-    include: ["tests/**/*.test.ts"],
-    globalSetup: ["tests/support/global-setup.ts"],
-    // The API tests share one database, so test files run one after another.
-    fileParallelism: false,
-    testTimeout: 30_000,
-    hookTimeout: 120_000,
-  },
+  test: { environment: "node", include: ["tests/**/*.test.ts"], testTimeout: 30_000 },
 });

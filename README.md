@@ -2,67 +2,59 @@
 
 # MeetingHub
 
-**A meeting room booking platform that cannot be double-booked.**
+**A meeting room booking app that runs entirely in the browser.**
 
-Find a room, book it in seconds, get it approved, and check in with a QR code.
+Find a room, book it in seconds, get it approved, and check in with a QR code. No server, no database.
 
 ![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
-![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-4169E1?logo=postgresql&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Deploys%20to-Vercel-000000?logo=vercel&logoColor=white)
 
 </div>
 
-MeetingHub is one Next.js application: the interface and the API ship in the same deployment, data lives in
-PostgreSQL (Prisma Postgres on Vercel), and room photos live in Vercel Blob. There is no separate backend to run.
+MeetingHub is a static Next.js application. The starting data (users, equipment, rooms) lives in a JSON file,
+[apps/web/data/db.json](apps/web/data/db.json), and everything people create afterwards (bookings, notifications,
+passwords, room changes) is kept in the browser's `localStorage`. The same `/api/v1` calls the screens make are answered
+by code that runs in the browser, so there is nothing to host except the pages themselves.
+
+> **Read this first: data is per browser.** Nothing is shared between people or devices. A booking made in one browser
+> is invisible in another, and clearing the site data erases it. That makes this a demo, a prototype, or a single-computer
+> kiosk, **not** a multi-user booking system. See [What this design cannot do](#what-this-design-cannot-do).
 
 ## Contents
 
-- [Highlights](#highlights)
 - [Features](#features)
 - [How it works](#how-it-works)
 - [Quick start](#quick-start)
+- [Changing the starting data](#changing-the-starting-data)
 - [Deploy to Vercel](#deploy-to-vercel)
-- [Configuration](#configuration)
+- [What this design cannot do](#what-this-design-cannot-do)
 - [Development](#development)
 - [Reference](#reference)
-- [Security](#security)
-
-## Highlights
-
-- **No double bookings, guaranteed by the database.** A PostgreSQL exclusion constraint rejects overlapping bookings
-  even when two people click at the same instant. Application checks give friendly errors; the constraint is the guarantee.
-- **Approval workflow.** Rooms can require approval; managers approve or reject with a written reason, and the
-  requester is notified.
-- **QR check-in.** A screen at the room shows a QR code that renews every 30 seconds, so a photo of it soon stops
-  working. Unclaimed bookings become no-shows and the room is released.
-- **Serverless by design.** Rate limits, job locks and sessions live in the database, uploads in Vercel Blob,
-  and background work runs from Vercel Cron, so it scales without a server to babysit.
-- **Tested against a real database.** The API test suite runs the real route handlers against a real PostgreSQL.
 
 ## Features
 
 **Booking**
 
 - Room search by capacity, building and equipment, with live availability
-- One-time and weekly recurring bookings, limited by room opening hours and a 30-day advance window
+- One-time and weekly recurring bookings, limited by opening hours and a 30-day advance window
+- No double bookings: overlapping and maintenance times are refused
 - Cancel one meeting or a whole weekly series; invite colleagues by name or email
 - Shared calendar, per-room day timeline, personal bookings and a list of meetings you are invited to
+- Approval workflow for rooms that need it, with a written reason when a request is rejected
+- Check-in from the booking list or by QR code; missed bookings become no-shows and release the room
 
 **Operations**
 
 - Room management: create, edit, activate or deactivate, upload photos (JPG, PNG, WebP)
-- Maintenance blocks that take rooms out of circulation
-- Dashboard, monthly booking reports with CSV export, and an audit log of who changed what
+- Maintenance blocks, dashboard, monthly booking reports with CSV export, and an audit log
 - In-app notifications for invitations, approvals, cancellations and check-in reminders
 
-**Accounts and security**
+**Accounts**
 
-- Email and password sign-in with an HTTP-only session cookie, revocable on sign-out
-- Roles: User, Facility Admin, Admin; temporary passwords that must be replaced at first sign-in
-- Login and password-reset rate limiting; the password reset request goes to the administrators
+- Email and password sign-in, roles (User, Facility Admin, Admin), temporary passwords that must be replaced
+- Sign-in lockout after repeated failures; a "forgot password" request that reaches the administrators
 
 | Role | Can do |
 | --- | --- |
@@ -74,50 +66,40 @@ PostgreSQL (Prisma Postgres on Vercel), and room photos live in Vercel Blob. The
 
 ```mermaid
 flowchart LR
-  Browser["Browser<br/>(React UI)"] -->|"/api/v1/*"| Routes["Next.js Route Handlers<br/>auth · validation · services"]
-  Routes -->|Prisma| DB[("PostgreSQL<br/>Prisma Postgres")]
-  Routes -->|"@vercel/blob"| Blob[("Vercel Blob<br/>room photos")]
-  Cron["Vercel Cron"] -->|"/api/cron/*"| Routes
+  UI["React screens"] -->|"apiFetch('/api/v1/...')"| Router["In-browser API<br/>lib/local: validation, rules, roles"]
+  Router --> Store[("localStorage<br/>meetinghub_db_v1")]
+  Seed["data/db.json<br/>users, equipment, rooms"] -.->|"first visit"| Store
 ```
-
-| Layer | Technology |
-| --- | --- |
-| App and API | Next.js 15 (App Router), React 19, TypeScript, Route Handlers under `app/api/v1` |
-| Data | PostgreSQL through Prisma, Prisma Migrate |
-| Validation | Zod |
-| Auth | JWT session cookie (`jose`), Argon2id (`@node-rs/argon2`) |
-| Storage | Vercel Blob |
-| Background work | Vercel Cron plus a throttled, traffic-triggered sweep |
-| Tests | Vitest, with API tests against a real PostgreSQL |
 
 ```text
 apps/web
-├── app/api/v1      API route handlers (thin: parse, authorize, call a service)
-├── app/api/cron    Vercel Cron targets
-├── app, features   Pages and UI
-├── lib/server      Business rules, auth, validation, Prisma access
-├── prisma          schema.prisma, migrations, seed script
-├── tests           Unit tests and API integration tests
-└── vercel.json     Build command and cron schedule
+├── app, features      Pages and UI
+├── lib/api.ts         The one place the UI calls the API
+├── lib/local          The in-browser API
+│   ├── router.ts        /api/v1 routes, handled one request at a time
+│   ├── handlers         accounts, rooms, bookings, operations (the business rules)
+│   ├── database.ts      The data document and its types, read from and saved to storage
+│   ├── password.ts      PBKDF2-SHA256 hashing with the Web Crypto API
+│   └── validation.ts    Zod schemas for every request
+├── data/db.json       Starting data
+├── scripts            build-seed.mjs, hash-password.mjs
+└── tests              Unit tests and API tests (tests/local)
 ```
+
+- The API code is loaded on the first request, so it stays out of the first screen.
+- Every request reads the current data, runs, and saves only if something changed. Two tabs of the same browser
+  therefore see each other's changes.
+- There is no scheduler: before each request the app catches up, sending check-in reminders and marking no-shows and
+  completed bookings.
+- Photos are shrunk in the browser (largest side 960 px) and stored inside the room record as data URLs.
 
 ## Quick start
 
-Requires **Node.js 20+**. No Docker and no database to install: a local PostgreSQL starts with one command.
+Requires **Node.js 20+**. No database, no environment variables.
 
 ```bash
 cd apps/web
-npm install                 # also generates the Prisma client
-cp .env.example .env        # PowerShell: Copy-Item .env.example .env
-npm run db:local            # terminal 1: local PostgreSQL, keep it running
-```
-
-In a second terminal:
-
-```bash
-cd apps/web
-npm run db:migrate          # create the schema
-npm run db:seed             # demo users, equipment and rooms
+npm install
 npm run dev
 ```
 
@@ -128,132 +110,71 @@ Open <http://localhost:3000> and sign in with a demo account:
 | Admin | `admin@meetinghub.com` | `Admin123!` |
 | User | `user@meetinghub.com` | `User123!` |
 
-The local database listens on port 54329 and keeps its data in `apps/web/.local-db` (ignored by Git; delete it to start
-over). Any PostgreSQL 14+ server with the `btree_gist` extension also works: set `DATABASE_URL` in `.env`.
-Room photo upload needs a Vercel Blob token; everything else works without one.
+The demo accounts are listed on the sign-in page in development. To start over, clear the site's data in your browser
+(DevTools → Application → Local storage, remove `meetinghub_db_v1` and `meetinghub_session`).
+
+## Changing the starting data
+
+The first time a browser opens the app it copies `data/db.json` into its own storage. After that the browser's copy is
+the truth, so editing the JSON only affects browsers that have not opened the app yet (or that cleared their data).
+
+To change the users, equipment or rooms, edit the lists at the top of
+[scripts/build-seed.mjs](apps/web/scripts/build-seed.mjs) and run:
+
+```bash
+npm run seed:build                      # rewrites data/db.json, hashing the demo passwords
+npm run password:hash -- "a password"   # prints a hash to paste into data/db.json by hand
+```
+
+Passwords in the JSON are stored as PBKDF2 hashes, never as plain text. Room photos are plain files in
+`public/rooms/`; point a room's `image_url` at `/rooms/your-file.png`.
 
 ## Deploy to Vercel
 
-One Vercel project hosts everything.
+There is nothing to configure.
 
-1. **Import the repository** and set **Root Directory** to `apps/web`. `vercel.json` sets the build command: generate
-   the Prisma client, apply migrations, build Next.js.
-2. **Add Prisma Postgres** (Project → Storage → Create → Prisma Postgres). It provides `POSTGRES_URL`, a direct
-   `postgres://` connection string, and the app and the build use it automatically (a custom prefix such as
-   `STORAGE_POSTGRES_URL` works too). Make sure the variable is enabled for the **Production** environment. To use another PostgreSQL, set
-   `DATABASE_URL` yourself. The `prisma+postgres://` Accelerate URL is not supported; the build says so if you use it.
-3. **Add Vercel Blob** (Storage → Create → Blob). This sets `BLOB_READ_WRITE_TOKEN` automatically.
-4. **Set the remaining variables** for Production:
-   - `SECRET_KEY`: a unique random value of at least 32 characters
-     (`node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`)
-   - `CRON_SECRET`: any long random string; Vercel Cron sends it as a bearer token
-   - `NEXT_PUBLIC_APP_URL`: your public address, such as `https://rooms.example.com` (used in the sitemap and QR codes)
-5. **Deploy.** Migrations run during the build.
-6. **Create the first administrator.** Seed once with `DEMO_MODE=true`, sign in as `admin@meetinghub.com`, create the
-   real administrator under **Employees & roles**, then deactivate the demo users and turn `DEMO_MODE` off:
+1. Import the repository in Vercel and set **Root Directory** to `apps/web`.
+2. Deploy. The default Next.js build is used (`npm run build`).
+3. Optional: set `NEXT_PUBLIC_APP_URL` to your public address (used in the sitemap and social previews; the Vercel
+   production domain is picked up automatically) and `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=true` to list the demo accounts on
+   the sign-in page.
 
-   ```bash
-   cd apps/web
-   vercel env pull .env --environment=production
-   npm run db:seed
-   rm .env
-   ```
+No database, storage, cron job or secret is needed. See [.env.example](apps/web/.env.example) for the optional variables.
 
-> **Preview deployments do not run migrations** by default, so a branch with an unreleased migration cannot change the
-> production database. Give Preview its own database and set `MIGRATE_PREVIEW=true` if previews should migrate it.
->
-> **The build stops with a clear message** when no database is configured for Production, instead of failing deep inside Prisma.
+## What this design cannot do
 
-<details>
-<summary><strong>Troubleshooting a deployed site</strong></summary>
+Because all data sits in each visitor's browser, and there is no server:
 
-Open the deployment in Vercel and read **Logs** (Runtime) for the exact cause; visitors only see a short message.
+- **No shared state.** Two people never see each other's bookings, so they can book the same room at the same time.
+  Invitations and notifications reach only people who use the same browser profile.
+- **No real security.** Roles and passwords are checked by code running on the visitor's own machine, and the starting
+  data (including password hashes) is downloaded by every visitor. Anyone can edit `localStorage` and become an
+  administrator. Treat every account as public.
+- **Data can disappear.** Clearing site data, private browsing, or a full storage (about 5 MB) loses or blocks it.
+  There is no backup.
+- **QR check-in works only inside one browser.** A code is accepted by the browser that issued it, so a phone scanning
+  the screen at the room cannot check in unless it shares that browser's storage.
+- **No email and no background jobs.** Reminders and no-shows are caught up when someone uses the app.
 
-| What you see | Meaning | Fix |
-| --- | --- | --- |
-| "The server is not fully configured" (`SERVER_NOT_CONFIGURED`) | A required setting is missing or invalid, usually `SECRET_KEY` | Set it for Production (32+ random characters) and redeploy |
-| "The database is not reachable or has not been set up" (`DATABASE_UNAVAILABLE`) | No connection, wrong credentials, or the tables were never created | Check `DATABASE_URL`/`POSTGRES_URL`; migrations only run on Production builds (see `MIGRATE_PREVIEW`) |
-| "Something went wrong on the server" (`INTERNAL_ERROR`) | An unexpected error | Find the stack trace in the runtime logs |
-| Build stops at "Cannot apply database migrations" | No `postgres://` URL is available to that environment | Enable the variable for Production, then redeploy |
-
-`GET /ready` reports configuration and database problems as `503` and answers `{"status":"ready"}` when both are fine.
-
-</details>
-
-<details>
-<summary><strong>Background jobs and Vercel limits</strong></summary>
-
-Check-in reminders, no-show marking and the demo reset cannot run as a long-lived process on Vercel.
-
-- `vercel.json` registers two cron jobs. On the **Hobby** plan a cron job runs at most once a day, so the sweep is
-  scheduled daily (`0 0 * * *`). On **Pro**, change it to `* * * * *` for a once-a-minute sweep.
-- Any signed-in request that loads notifications, the calendar or "my bookings" also triggers a sweep in the background,
-  at most once per `STATUS_SWEEP_INTERVAL_SECONDS` (60 by default). The sweep is claimed atomically in the database,
-  so concurrent instances never run it twice. While anyone has the site open, reminders and no-shows stay current
-  even on Hobby; with nobody using it, they catch up on the next visit or the daily cron.
-- Admins can run the sweep on demand with `POST /api/v1/jobs/expire-no-shows`.
-- Request bodies are limited to 4.5 MB on Vercel, so room photos are limited to **4 MB**.
-- Rate limits, the sweep lock and the demo reset keep their state in PostgreSQL, because serverless instances share
-  no memory or disk.
-
-</details>
-
-<details>
-<summary><strong>Public demo mode</strong></summary>
-
-Set `DEMO_MODE=true` to run a try-it-out instance. A daily cron job (`/api/cron/demo-reset`, 00:00 Asia/Bangkok in
-[vercel.json](apps/web/vercel.json)) deletes all bookings, notifications, audit entries, uploaded photos and any users
-or rooms people added, then restores the seeded accounts and rooms. Seed once beforehand. Set
-`NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS=true` to list the demo accounts on the sign-in page. **Never enable demo mode on a
-database that holds real data.**
-
-</details>
-
-## Configuration
-
-Copy [apps/web/.env.example](apps/web/.env.example) to `.env`. Never commit `.env`.
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | required | Direct PostgreSQL connection string. `POSTGRES_URL` (from Prisma Postgres), or a prefixed one such as `STORAGE_POSTGRES_URL`, is used when it is unset. |
-| `SECRET_KEY` | required | Signs session and check-in tokens. In production: unique, at least 32 characters. |
-| `APP_ENV` | automatic | `development`, `test` or `production`. Vercel production counts as `production`: `Secure` cookies, weak secrets rejected. |
-| `BLOB_READ_WRITE_TOKEN` | none | Vercel Blob token for photo uploads. Without it uploads answer `503`. |
-| `CRON_SECRET` | none | Bearer secret for `/api/cron/*`. Without it those endpoints answer `503`. |
-| `FACILITY_TIMEZONE` | `Asia/Bangkok` | Timezone for opening hours and daily metrics. |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `480` | Session lifetime. |
-| `STATUS_SWEEP_INTERVAL_SECONDS` | `60` | Minimum gap between traffic-triggered sweeps; `0` disables them. |
-| `LOGIN_MAX_ATTEMPTS` / `LOGIN_WINDOW_MINUTES` | `5` / `15` | Failed sign-ins allowed per client and email before a lockout. |
-| `MIGRATE_PREVIEW` | `false` | Run migrations on Vercel Preview deployments (Production always migrates). |
-| `DEMO_MODE` | `false` | Daily data reset, and allows seeding in production. |
-| `NEXT_PUBLIC_APP_URL` | production domain | Public address for the sitemap, social previews and QR codes. Set it before building. |
-| `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS` | development only | List demo accounts on the sign-in page. |
-| `EXTRA_CORS_ORIGINS` | empty | Extra origins allowed to send cookie-authenticated writes (comma separated). |
-| `SESSION_COOKIE_DOMAIN` | unset | Only for sibling subdomains, such as `.example.com`. |
+For several people to book the same rooms, the data has to live on a server. The previous version of this project did
+exactly that with PostgreSQL, Prisma and Vercel; it is in the Git history (the commit before "Use a JSON file instead of
+a database") if you want it back.
 
 ## Development
 
 Run from `apps/web`:
 
 ```bash
-npm run dev                 # development server
+npm run dev             # development server
 npm run lint
 npm run typecheck
-npm run test                # unit tests and API integration tests
-npm run build               # prisma generate + next build
-npm run db:local            # local PostgreSQL, no Docker
-npm run db:migrate          # apply migrations
-npm run db:migrate:dev      # create a migration after changing prisma/schema.prisma
-npm run db:seed             # demo data
-npm run db:studio           # browse the database
+npm run test            # unit tests and API tests
+npm run build
+npm run seed:build      # regenerate data/db.json
 ```
 
-The API tests (`tests/server`) call the real route handlers against a real PostgreSQL that starts automatically
-(the `embedded-postgres` dev dependency), apply the committed migrations, and never touch development data.
-Set `TEST_DATABASE_URL` to use a server you provide instead; the tests empty its tables.
-
-After changing `prisma/schema.prisma`, run `npm run db:migrate:dev -- --name describe_the_change`, review the generated
-SQL and commit the new migration. Never edit a migration that has already been deployed.
+The API tests (`tests/local`) run the real router against in-memory storage with a clock they can move, so they cover
+sign-in lockout, booking rules, approvals, check-in windows, reports and storage behaviour without a browser.
 
 ## Reference
 
@@ -261,12 +182,12 @@ SQL and commit the new migration. Never edit a migration that has already been d
 <summary><strong>Booking rules</strong></summary>
 
 - A booking lasts at most 4 hours, starts in the future, and starts at most 30 days ahead.
-- It must fall inside the room's opening hours, interpreted in `FACILITY_TIMEZONE`.
-- Two active bookings can never overlap in the same room: the API checks, and the PostgreSQL exclusion constraint
-  `bookings_no_overlap` (created by the first migration) guarantees it under concurrent requests.
-- Weekly recurrence creates one booking per week while the start stays within the 30-day window.
-- Rooms marked "requires approval" create `PENDING_APPROVAL` bookings that a Facility Admin or Admin approves or
-  rejects. Rejecting requires a reason. Moving a booking to a new room or time applies the approval rule again.
+- It must fall inside the room's opening hours, interpreted in `Asia/Bangkok` (set `NEXT_PUBLIC_FACILITY_TIMEZONE` to change it).
+- Two active bookings can never overlap in the same room, and maintenance windows block bookings.
+- Weekly recurrence creates one booking per week while the start stays within the 30-day window; if any week is taken,
+  nothing is created.
+- Rooms marked "requires approval" create `PENDING_APPROVAL` bookings that a Facility Admin or Admin approves or rejects.
+  Rejecting requires a reason. Moving a booking to a new room or time applies the approval rule again.
 - Check-in opens 15 minutes before the start and closes 15 minutes after it. Confirmed bookings not checked in by then
   become `NO_SHOW`; checked-in bookings become `COMPLETED` when they end.
 
@@ -275,43 +196,20 @@ SQL and commit the new migration. Never edit a migration that has already been d
 <details>
 <summary><strong>QR check-in</strong></summary>
 
-In **Rooms & people → Room management**, **Check-in screen** opens a full-screen page for that room. Leave it open on a
-tablet or monitor at the room, signed in as a manager. The QR code renews every 30 seconds and each code stops working
-120 seconds after it is issued.
-
-Scanning opens the site, asks the person to sign in if needed, and checks in their own confirmed booking for that room
-when its window is open. Because the code keeps changing, a photo of the screen soon stops working. It does not prove
-where the phone is, and the person still has to be the organizer of a booking that is due. Check-in from the booking
-list needs no code.
-
-The QR code contains the address people use to reach the site, so set `NEXT_PUBLIC_APP_URL` (or open the screen from that
-address). `localhost` only works on the computer running the site, and the screen warns when it is using it.
-
-</details>
-
-<details>
-<summary><strong>Notifications, password resets and reports</strong></summary>
-
-- **Notifications** appear under the bell in the top bar and refresh every minute while the tab is visible. They cover
-  invitations, changes, cancellations, approval requests, decisions, check-in reminders, no-shows and password reset
-  requests. Nothing is sent by email: no mail server is configured.
-- **Forgotten passwords:** "Forgot your password?" notifies the Admins, who issue a temporary password under
-  **Employees & roles → Reset password**; the user must replace it at the next sign-in. Requests are rate limited and the
-  page answers the same whether or not the account exists.
-- **Reports:** Booking health covers all time or one month and exports the same period as CSV in `FACILITY_TIMEZONE`.
-  Cancelled and rejected requests do not count as room use. The export holds at most 50,000 rows.
-- **Room photos:** JPG, PNG or WebP up to 4 MB, checked by type and file signature, stored in Vercel Blob. Replacing or
-  deleting a photo removes the old file; bundled photos and external URLs are never deleted.
+In **Rooms & people → Room management**, **Check-in screen** opens a full-screen page for that room, to leave open at the
+room while signed in as a manager. The code renews every 30 seconds and stops working 120 seconds after it is issued.
+Scanning opens the site, asks the person to sign in, and checks in their own confirmed booking for that room when its
+window is open. Because the data is per browser, this only works in the browser that issued the code (see above).
+Check-in from the booking list needs no code.
 
 </details>
 
 <details>
 <summary><strong>API overview</strong></summary>
 
-Route handlers live in `apps/web/app/api/v1`, business rules in `apps/web/lib/server`. Bodies and queries are validated
-with the Zod schemas in [validation.ts](apps/web/lib/server/validation.ts); unknown properties are ignored. All
-date-times must include a UTC offset. Errors use one shape:
-`{"error": {"code": "ROOM_UNAVAILABLE", "message": "...", "field": "starts_at"}}`.
+The routes are in [lib/local/router.ts](apps/web/lib/local/router.ts); the rules are in `lib/local/handlers`. Requests
+and answers keep the shapes in [lib/types.ts](apps/web/lib/types.ts). All date-times include a UTC offset. Errors use one
+shape: `{"error": {"code": "ROOM_UNAVAILABLE", "message": "...", "field": "starts_at"}}`.
 
 | Path | Purpose |
 | --- | --- |
@@ -321,28 +219,11 @@ date-times must include a UTC offset. Errors use one shape:
 | `/rooms/{id}/image` | Upload or delete a room photo |
 | `/rooms/{id}/check-in-token`, `/rooms/{id}/check-in` | QR check-in code (managers) and scan target |
 | `/bookings` | Create, update, cancel (one or series), approve, reject, check in, list |
-| `/bookings/invited`, `/bookings/schedule`, `/booking-policy` | Invitations, shared calendar, enforced limits |
-| `/maintenance` | Maintenance blocks |
-| `/dashboard`, `/reports/summary`, `/reports/bookings.csv` | Metrics and export |
-| `/audit-logs` | Who changed what (Admin) |
-| `/api/cron/sweep`, `/api/cron/demo-reset` | Cron targets, protected by `CRON_SECRET` |
-
-`GET /health` and `GET /ready` are available for monitoring.
+| `/bookings/invited`, `/bookings/schedule`, `/booking-policy` | Invitations, shared calendar, limits |
+| `/maintenance`, `/dashboard`, `/reports/*`, `/audit-logs` | Operations |
+| `/notifications` | The signed-in user's notifications |
 
 </details>
-
-## Security
-
-- Authorization is enforced on the server for every protected endpoint; hidden buttons are not the security boundary.
-- Passwords are Argon2id hashes. Sessions live in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` in production), and
-  cookie-authenticated writes from unknown origins are rejected.
-- Signing out, changing a password or an admin reset revokes the user's existing sessions.
-- Failed sign-ins are rate limited per client and email, counted in PostgreSQL so every serverless instance shares them.
-  The client address comes from `x-forwarded-for`, which Vercel sets itself; behind another host, make sure your proxy
-  overwrites that header.
-- Cron endpoints refuse every request without `CRON_SECRET` and fail closed when it is not configured.
-- Responses never include password hashes or internal columns; unexpected errors return a generic message.
-- The app refuses to start in production with a placeholder `SECRET_KEY`. Never use the demo credentials on real data.
 
 ## License
 

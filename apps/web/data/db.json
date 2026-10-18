@@ -1,0 +1,144 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "admin@meetinghub.com",
+      "full_name": "System Administrator",
+      "department": null,
+      "team": null,
+      "role": "ADMIN",
+      "is_active": true,
+      "must_change_password": false,
+      "password_hash": "pbkdf2-sha256$100000$e16098d704ddc5b7c1588c1e831c08e9$7bd3a59a4c5208332cdee761e3518e8ebe6cf1593c62ed02912f7d17084be4a4"
+    },
+    {
+      "id": 2,
+      "email": "user@meetinghub.com",
+      "full_name": "MeetingHub User",
+      "department": null,
+      "team": null,
+      "role": "USER",
+      "is_active": true,
+      "must_change_password": false,
+      "password_hash": "pbkdf2-sha256$100000$5b6c03c984e3f130176b76e94e8e88a3$7e0f4a6bb3e4d238bc1f42b1e46301c4e5b8f7ff5b5159e756ed8f4d3712f4f2"
+    }
+  ],
+  "facilities": [
+    {
+      "id": 1,
+      "name": "TV"
+    },
+    {
+      "id": 2,
+      "name": "Projector"
+    },
+    {
+      "id": 3,
+      "name": "Whiteboard"
+    },
+    {
+      "id": 4,
+      "name": "Video Conference"
+    },
+    {
+      "id": 5,
+      "name": "HDMI"
+    }
+  ],
+  "rooms": [
+    {
+      "id": 1,
+      "name": "Studio 01",
+      "building": "North House",
+      "floor": "02",
+      "capacity": 8,
+      "image_url": "/rooms/studio-01.png",
+      "opens_at": "08:00",
+      "closes_at": "18:00",
+      "requires_approval": false,
+      "is_active": true,
+      "facility_ids": [
+        4,
+        3
+      ]
+    },
+    {
+      "id": 2,
+      "name": "The Library",
+      "building": "Main Building",
+      "floor": "04",
+      "capacity": 14,
+      "image_url": "/rooms/the-library.png",
+      "opens_at": "08:00",
+      "closes_at": "18:00",
+      "requires_approval": false,
+      "is_active": true,
+      "facility_ids": [
+        2,
+        5
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Focus Room",
+      "building": "North House",
+      "floor": "01",
+      "capacity": 4,
+      "image_url": "/rooms/focus-room.png",
+      "opens_at": "08:00",
+      "closes_at": "18:00",
+      "requires_approval": false,
+      "is_active": true,
+      "facility_ids": [
+        3
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Atrium Room",
+      "building": "South Wing",
+      "floor": "03",
+      "capacity": 20,
+      "image_url": "/rooms/atrium-room.png",
+      "opens_at": "08:00",
+      "closes_at": "18:00",
+      "requires_approval": false,
+      "is_active": true,
+      "facility_ids": [
+        4,
+        2
+      ]
+    },
+    {
+      "id": 5,
+      "name": "The Loft",
+      "building": "Main Building",
+      "floor": "05",
+      "capacity": 10,
+      "image_url": "/rooms/the-loft.png",
+      "opens_at": "08:00",
+      "closes_at": "18:00",
+      "requires_approval": false,
+      "is_active": true,
+      "facility_ids": [
+        5,
+        3
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Boardroom A",
+      "building": "South Wing",
+      "floor": "02",
+      "capacity": 12,
+      "image_url": "/rooms/boardroom-a.png",
+      "opens_at": "08:00",
+      "closes_at": "18:00",
+      "requires_approval": false,
+      "is_active": true,
+      "facility_ids": [
+        4
+      ]
+    }
+  ]
+}

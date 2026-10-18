@@ -6,7 +6,7 @@ import { apiFetch, errorMessage, safeNextPath } from "../../lib/api";
 import type { TokenResponse } from "../../lib/types";
 import { Icon } from "../components/icons";
 
-// Accounts created by `npm run db:seed`. Shown in development only, unless
+// The demo accounts in data/db.json. Shown in development only, unless
 // NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS says otherwise, so a production build never advertises them.
 const DEMO_ACCOUNTS = [
   { role: "Admin", email: "admin@meetinghub.com", password: "Admin123!" },
